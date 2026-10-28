@@ -43,3 +43,23 @@ _Avoid_: Metadata, audit trail, lineage
 **Clamp**:
 Moving an as-of date to the oldest or newest version when it falls outside them. Provenance reports which side (`BEFORE_OLDEST` or `AFTER_NEWEST`) and how many days the date was moved.
 _Avoid_: Fallback, extrapolation
+
+**Rebuild**:
+Replaying a table type's versions from the datastore into a fresh cache and swapping it in atomically. It runs at startup, and again whenever a poll finds a change to history or the user calls `rebuild()`.
+_Avoid_: Reload, refresh (a refresh appends new versions incrementally)
+
+**Change to history**:
+A late version (dated before the refresh cursor), an edited version (its checksum differs from the loaded one), or a removed version (loaded but no longer listed). Any of them triggers one rebuild per poll.
+_Avoid_: Correction, backfill
+
+**Retention window**:
+An opt-in limit on how much history a build loads. It applies at build and rebuild time only.
+_Avoid_: TTL, expiry
+
+**Baseline version**:
+The oldest version a build loads. With a retention window it is the oldest version inside the window; as-of dates before it clamp to it.
+_Avoid_: Base snapshot, initial load
+
+**Checksum**:
+A per-version value supplied by the `VersionSource` to detect edits to a loaded version. It is not a security check; the datastore is trusted.
+_Avoid_: Hash, signature
