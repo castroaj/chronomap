@@ -10,7 +10,7 @@ v0.1 ships the exact-key core only. Range matching (for example the phone-routin
 - **Identity.** A range row is identified by (prefix, `lo`). The upper bound `hi` and the payload are the row's value, so a bounds change is an ordinary dated change (an update), and a split is an update on the first half plus a create for the second.
 - **No overlaps.** Two range rows with the same prefix that overlap within one version make that version malformed. It follows the `onMalformed` policy: dropped whole and logged by default, `THROW` opt-in.
 - **Timelines.** Each range has its own timeline of full-row dated changes. No per-version index is materialized, so memory stays proportional to the dated changes, not versions × ranges.
-- **Inherited rules.** Lenient clamping to the oldest and newest version, tombstones for removed ranges, and re-adding after a tombstone all behave as in the exact-key core. Provenance for ranges follows the provenance decision (#5).
+- **Inherited rules.** Lenient clamping to the oldest and newest version, tombstones for removed ranges, and re-adding after a tombstone all behave as in the exact-key core. Provenance for ranges follows ADR 0002: the same fields plus the optional `matchedRange` (`lo`, `hi`), with `changeDate` and `versionRef` taken from the matched range's own timeline.
 
 ## Default lookup structure (non-binding)
 

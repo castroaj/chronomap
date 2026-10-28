@@ -35,3 +35,11 @@ _Avoid_: Partition, bucket
 **Range-keyed table type**:
 A table type whose key ends in a range. It is declared as such at build time and never mixes with exact keys. Reserved, not built, in v0.1.
 _Avoid_: Interval table
+
+**Provenance**:
+What a lookup reports about what asserted its answer: the outcome, the date and reference of the version that introduced the answer, and any clamp. Returned by `lookup`, never by `get`.
+_Avoid_: Metadata, audit trail, lineage
+
+**Clamp**:
+Moving an as-of date to the oldest or newest version when it falls outside them. Provenance reports which side (`BEFORE_OLDEST` or `AFTER_NEWEST`) and how many days the date was moved.
+_Avoid_: Fallback, extrapolation
