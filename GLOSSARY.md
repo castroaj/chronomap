@@ -23,3 +23,15 @@ _Avoid_: History, log
 **As-of lookup**:
 Asking for a key's state on a given date.
 _Avoid_: Point-in-time query, time travel
+
+**Range row**:
+A row whose last key component is an inclusive integer interval (`lo` to `hi`) rather than a single value, identified by its prefix and `lo`. Only range-keyed table types have them.
+_Avoid_: Range record, interval
+
+**Prefix**:
+The key components before the range in a range-keyed table type, matched exactly.
+_Avoid_: Partition, bucket
+
+**Range-keyed table type**:
+A table type whose key ends in a range. It is declared as such at build time and never mixes with exact keys. Reserved, not built, in v0.1.
+_Avoid_: Interval table
