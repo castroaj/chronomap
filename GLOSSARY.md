@@ -71,3 +71,7 @@ _Avoid_: Staleness, delay
 **Heap estimate**:
 Chronomap's own estimate of the memory a table type's cache holds: the timeline structure, plus value sizes when the user supplies a sizer. Never a measured retained size.
 _Avoid_: Memory usage, footprint
+
+**Versions table**:
+The datastore table that lists each table type's versions: their dates, a pointer to where each version's rows are stored, a checksum, and optionally when each was ingested. Written by the user's ingestion service, never by Chronomap.
+_Avoid_: Manifest, catalog, index
