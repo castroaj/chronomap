@@ -63,3 +63,11 @@ _Avoid_: Base snapshot, initial load
 **Checksum**:
 A per-version value supplied by the `VersionSource` to detect edits to a loaded version. It is not a security check; the datastore is trusted.
 _Avoid_: Hash, signature
+
+**Freshness lag**:
+How far the data is behind, reported two ways: the days between today and the newest loaded version's date, and the seconds since the last successful poll. The first reveals a datastore that stopped publishing; the second reveals a stuck poller.
+_Avoid_: Staleness, delay
+
+**Heap estimate**:
+Chronomap's own estimate of the memory a table type's cache holds: the timeline structure, plus value sizes when the user supplies a sizer. Never a measured retained size.
+_Avoid_: Memory usage, footprint
