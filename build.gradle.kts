@@ -3,7 +3,6 @@ plugins {
 }
 
 val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
-val googleJavaFormatVersion = catalog.findVersion("googleJavaFormat").get().requiredVersion
 
 allprojects {
     group = "io.github.castroaj"
@@ -51,7 +50,7 @@ subprojects {
     extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         java {
             target("src/**/*.java")
-            googleJavaFormat(googleJavaFormatVersion)
+            googleJavaFormat(catalog.findVersion("googleJavaFormat").get().requiredVersion)
         }
     }
 }
