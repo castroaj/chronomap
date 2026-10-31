@@ -40,7 +40,7 @@ subprojects {
         finalizedBy(tasks.named("jacocoTestReport"))
     }
 
-    // Report only: coverage is never a gate (ADR 0007).
+    // Report only: coverage is never a gate (issue #19).
     tasks.withType<JacocoReport>().configureEach {
         reports {
             xml.required = true
