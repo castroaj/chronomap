@@ -34,5 +34,5 @@ Dependency locking and checksum verification are on. After changing a dependency
 Commit the updated `gradle.lockfile` and `gradle/verification-metadata.xml`. CI fails on
 a stale lockfile or a checksum mismatch.
 
-Core (`chronomap`) must never depend on a framework. The build fails if it imports or
-depends on `org.springframework.*`.
+Core (`chronomap`) must never depend on a framework (ADR 0007). Reviewers check that it
+neither imports nor depends on `org.springframework.*`.
