@@ -17,3 +17,7 @@ Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agen
 ### Branch naming
 
 Feature branches: `feature/{issue-number}-{issue-name}` (e.g. `feature/12-version-source-contract`).
+
+### Working location
+
+Do the work on a checked-out branch in the main working copy. Do not use git worktrees (no `EnterWorktree`, `git worktree add`, or `isolation: "worktree"`).
