@@ -50,7 +50,7 @@ subprojects {
     extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         java {
             target("src/**/*.java")
-            googleJavaFormat(catalog.findVersion("googleJavaFormat").get().requiredVersion)
+            googleJavaFormat(catalog.findVersion("googleJavaFormat").get().requiredVersion).aosp()
         }
     }
 }

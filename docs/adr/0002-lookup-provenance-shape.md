@@ -1,6 +1,6 @@
 # Lookups report provenance through a separate `lookup` call
 
-`get` returns `Optional<V>` and computes nothing else. `lookup` returns a non-null `Lookup<V>`: an `Optional<V>` value plus a `Provenance` record saying what asserted the answer. The shape below is binding.
+`get` returns `Optional<RECORD>` and computes nothing else. `lookup` returns a non-null `Lookup<RECORD>`: an `Optional<RECORD>` value plus a `Provenance` record saying what asserted the answer. The shape below is binding.
 
 ## Provenance fields
 
@@ -25,4 +25,4 @@
 - **Report the confirming version too.** Rejected: it needs a separate list of version dates per table type and answers a different question than what asserted the value.
 - **Boolean `clamped`.** Rejected: it hides which side was clamped. Clamping past the newest version can mean the datastore stopped publishing.
 - **Generic `versionRef` type.** Rejected: it adds a type parameter to every public type, and callers only log or display the ref.
-- **Provenance on `get`.** Rejected: it would allocate on the lean path and break the `Optional<V>` contract settled in the quickstart API.
+- **Provenance on `get`.** Rejected: it would allocate on the lean path and break the `Optional<RECORD>` contract settled in the quickstart API.
