@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ChronomapBuildStreamTest {
     private static final VersionRef REF =
@@ -63,24 +65,19 @@ class ChronomapBuildStreamTest {
         assertEquals("a", map.get("a", REF.date()).orElseThrow());
     }
 
-    @Test
-    void buildClosesTheStreamAndKeepsTheCauseWhenTheStreamFailsMidway() {
-        ProbeSource source = new ProbeSource(true, false);
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+        "failure mid-stream, true, false, bad row",
+        "failure while closing, false, true, close failed"
+    })
+    void aStreamFailureFailsTheVersionClosesTheStreamAndKeepsTheCause(
+            String scenario, boolean failMidStream, boolean failOnClose, String causeMessage) {
+        ProbeSource source = new ProbeSource(failMidStream, failOnClose);
 
         IllegalStateException e =
                 assertThrows(IllegalStateException.class, () -> builderOver(source).build());
 
         assertTrue(source.closed.get());
-        assertEquals("bad row", e.getCause().getMessage());
-    }
-
-    @Test
-    void aFailureWhileClosingFailsTheVersion() {
-        ProbeSource source = new ProbeSource(false, true);
-
-        IllegalStateException e =
-                assertThrows(IllegalStateException.class, () -> builderOver(source).build());
-
-        assertEquals("close failed", e.getCause().getMessage());
+        assertEquals(causeMessage, e.getCause().getMessage());
     }
 }
