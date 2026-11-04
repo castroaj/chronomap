@@ -1,6 +1,7 @@
 package io.github.castroaj.chronomap;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,16 +13,19 @@ import java.util.stream.Stream;
 /**
  * A cache that answers "what was true for this key on this date?" (ADR 0006).
  *
- * <p>Build one per table type with {@link #table(String)}.
+ * <p>Build one per table type with {@link #table(String)}. The cache stores a dated change only
+ * when a row differs from the key's previous row by {@code equals}, so {@code RECORD} must be a
+ * value-equal type (a record, for instance); a row type with identity {@code equals} records a
+ * change for every row of every version.
  *
- * @param <KEY> the key type that identifies a row
- * @param <RECORD> the row type of the table type
+ * @param <KEY> the key type that identifies a row; a value-equal type, which may be composite
+ * @param <RECORD> the row type of the table type; a value-equal type
  */
 public final class Chronomap<KEY, RECORD> {
-    private final Map<KEY, RECORD> rows;
+    private final Timeline<KEY, RECORD> timeline;
 
-    private Chronomap(Map<KEY, RECORD> rows) {
-        this.rows = rows;
+    private Chronomap(Timeline<KEY, RECORD> timeline) {
+        this.timeline = timeline;
     }
 
     /**
@@ -38,17 +42,18 @@ public final class Chronomap<KEY, RECORD> {
     }
 
     /**
-     * Looks up the row for {@code key} as of {@code asOf}.
+     * Looks up the row for {@code key} as of {@code asOf}. A date before the oldest version or
+     * after the newest is moved to that bound.
      *
      * @param key the key to look up
      * @param asOf the date to answer for
-     * @return the row, or empty when the key has no row then
+     * @return the row, or empty when the key was never seen, not yet created, or deleted then
      * @throws NullPointerException if {@code key} or {@code asOf} is null
      */
     public Optional<RECORD> get(KEY key, LocalDate asOf) {
         Objects.requireNonNull(key, "key must not be null");
         Objects.requireNonNull(asOf, "asOf must not be null");
-        return Optional.ofNullable(rows.get(key));
+        return timeline.get(key, asOf);
     }
 
     /**
@@ -96,21 +101,16 @@ public final class Chronomap<KEY, RECORD> {
          * loaded.
          *
          * @return the built cache
-         * @throws UnsupportedOperationException if the source lists more than one version
+         * @throws IllegalArgumentException if the source lists two versions with the same date
          * @throws IllegalStateException if reading a version fails; the cause is preserved and the
          *     version's stream is closed
          */
         public Chronomap<KEY, RECORD> build() {
-            List<VersionRef> refs = source.list(null);
-            if (refs.size() > 1) {
-                throw new UnsupportedOperationException(
-                        "Replaying several versions needs the timeline");
+            List<Timeline.Snapshot<KEY, RECORD>> snapshots = new ArrayList<>();
+            for (VersionRef ref : source.list(null)) {
+                snapshots.add(new Timeline.Snapshot<>(ref.date(), readVersion(ref)));
             }
-            Map<KEY, RECORD> rows = new HashMap<>();
-            for (VersionRef ref : refs) {
-                rows.putAll(readVersion(ref));
-            }
-            return new Chronomap<>(rows);
+            return new Chronomap<>(Timeline.of(snapshots));
         }
 
         /**
