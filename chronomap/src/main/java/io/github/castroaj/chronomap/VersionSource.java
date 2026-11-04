@@ -23,6 +23,13 @@ public interface VersionSource<RECORD> {
     /**
      * Reads one whole version. Any bad row fails the whole version.
      *
+     * <p>Lifetime (ADR 0005): the caller owns the returned stream and closes it, so a source that
+     * holds a file handle or cursor releases it from {@link Stream#onClose}, and only there. Each
+     * call returns a fresh, single-use stream; the caller may close it without consuming it all,
+     * and a later {@code read} of the same ref works. A {@link RuntimeException} while opening,
+     * consuming or closing the stream fails the version, and the caller discards any rows it
+     * already took from it. Reads are sequential; timeouts are the source's own concern.
+     *
      * @param ref the version to read, as returned by {@link #list(LocalDate)}
      * @return the rows of the version
      */

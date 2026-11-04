@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * A cache that answers "what was true for this key on this date?" (ADR 0006).
@@ -96,6 +97,8 @@ public final class Chronomap<KEY, RECORD> {
          *
          * @return the built cache
          * @throws UnsupportedOperationException if the source lists more than one version
+         * @throws IllegalStateException if reading a version fails; the cause is preserved and the
+         *     version's stream is closed
          */
         public Chronomap<KEY, RECORD> build() {
             List<VersionRef> refs = source.list(null);
@@ -105,9 +108,24 @@ public final class Chronomap<KEY, RECORD> {
             }
             Map<KEY, RECORD> rows = new HashMap<>();
             for (VersionRef ref : refs) {
-                source.read(ref).forEach(row -> rows.put(keyExtractor.apply(row), row));
+                rows.putAll(readVersion(ref));
             }
             return new Chronomap<>(rows);
+        }
+
+        /**
+         * Reads one whole version into its own map, so a failed version contributes nothing. The
+         * stream is closed on every path (ADR 0005), and a failure while opening, consuming or
+         * closing it fails the version.
+         */
+        private Map<KEY, RECORD> readVersion(VersionRef ref) {
+            Map<KEY, RECORD> versionRows = new HashMap<>();
+            try (Stream<RECORD> stream = source.read(ref)) {
+                stream.forEach(row -> versionRows.put(keyExtractor.apply(row), row));
+            } catch (RuntimeException e) {
+                throw new IllegalStateException("Failed to read version " + ref.id(), e);
+            }
+            return versionRows;
         }
     }
 }

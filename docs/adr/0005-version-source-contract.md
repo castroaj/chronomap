@@ -17,6 +17,8 @@ record VersionRef(String id, LocalDate date, String checksum)  // id is an opaqu
 - **Late versions:** a version dated at or before the cursor is ignored by refresh and handled by a rebuild (ADR 0003).
 - **Checksum:** every version carries one, required (ADR 0003), as the third component of `VersionRef` so a single `list` call reports it. The in-memory source computes it as the SHA-256 of each row's `toString`, so its rows need a value-based `toString` (records have one).
 - **Stable refs:** a source returns the same `versionRef` for the same version across restarts and rebuilds (ADR 0002).
+- **Stream lifetime:** the caller of `read` owns the returned stream and closes it (try-with-resources); a source holding a file handle or cursor releases it only from `Stream.onClose`. Each `read` returns a fresh single-use stream, which the caller may close without draining, and a later `read` of the same ref works. Reads are sequential; timeouts and cancellation are the source's own concern.
+- **Mid-stream failure:** a `RuntimeException` while opening, consuming or closing the stream fails the version (`Error`s propagate untouched). A failed version contributes nothing: the builder stages each version's rows and merges them only after a clean consume and close. Until the failure policy lands, the builder rethrows the failure with its cause preserved and the stream closed.
 - **Malformed versions:** any bad row fails the whole version, which is dropped and logged by default (`THROW` is opt-in).
 
 ## Core sources
