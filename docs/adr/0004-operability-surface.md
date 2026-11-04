@@ -31,7 +31,7 @@ All meters carry a `table` tag with the table type's name.
 
 ## Heap estimate
 
-The estimate is the timeline structure (keys and dated changes times fixed per-entry constants, calibrated against the JMH suite from #7) plus an optional `valueSizer(ToLongFunction<V>)` applied per value. Without a sizer it covers structure only. It is recomputed at build, refresh and rebuild time, never on a scrape, and the docs call it an estimate.
+The estimate is the timeline structure (keys and dated changes times fixed per-entry constants, calibrated against the JMH suite from #7) plus an optional `valueSizer(ToLongFunction<RECORD>)` applied per value. Without a sizer it covers structure only. It is recomputed at build, refresh and rebuild time, never on a scrape, and the docs call it an estimate.
 
 ## Logging
 
