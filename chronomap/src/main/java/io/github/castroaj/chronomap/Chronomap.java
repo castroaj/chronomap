@@ -57,6 +57,23 @@ public final class Chronomap<KEY, RECORD> {
     }
 
     /**
+     * Looks up the row for {@code key} as of {@code asOf} and reports what asserted the answer (ADR
+     * 0002). The answer is the same as {@link #get}; the {@link Provenance} says whether the key
+     * was present, deleted or not found, which version introduced the answer, and whether the date
+     * was clamped.
+     *
+     * @param key the key to look up
+     * @param asOf the date to answer for
+     * @return the row and its provenance, never null
+     * @throws NullPointerException if {@code key} or {@code asOf} is null
+     */
+    public Lookup<RECORD> lookup(KEY key, LocalDate asOf) {
+        Objects.requireNonNull(key, "key must not be null");
+        Objects.requireNonNull(asOf, "asOf must not be null");
+        return timeline.lookup(key, asOf);
+    }
+
+    /**
      * Configures and builds a {@link Chronomap}.
      *
      * @param <KEY> the key type that identifies a row
@@ -108,7 +125,7 @@ public final class Chronomap<KEY, RECORD> {
         public Chronomap<KEY, RECORD> build() {
             List<Timeline.Snapshot<KEY, RECORD>> snapshots = new ArrayList<>();
             for (VersionRef ref : source.list(null)) {
-                snapshots.add(new Timeline.Snapshot<>(ref.date(), readVersion(ref)));
+                snapshots.add(new Timeline.Snapshot<>(ref.date(), ref.id(), readVersion(ref)));
             }
             return new Chronomap<>(Timeline.of(snapshots));
         }

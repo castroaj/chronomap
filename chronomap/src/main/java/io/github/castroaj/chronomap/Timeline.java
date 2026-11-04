@@ -1,5 +1,6 @@
 package io.github.castroaj.chronomap;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,30 +26,46 @@ final class Timeline<KEY, RECORD> {
      * One version's rows by key, as of a date.
      *
      * @param date the date the version is as of
+     * @param versionRef the source's opaque reference to the version
      * @param rows every row of the version by key
      * @param <KEY> the key type that identifies a row
      * @param <RECORD> the row type of the table type
      */
-    record Snapshot<KEY, RECORD>(LocalDate date, Map<KEY, RECORD> rows) {
+    record Snapshot<KEY, RECORD>(LocalDate date, String versionRef, Map<KEY, RECORD> rows) {
         Snapshot {
             Objects.requireNonNull(date, "date must not be null");
+            Objects.requireNonNull(versionRef, "versionRef must not be null");
             Objects.requireNonNull(rows, "rows must not be null");
+        }
+
+        /** A snapshot whose version reference is its date, for callers that do not track one. */
+        Snapshot(LocalDate date, Map<KEY, RECORD> rows) {
+            this(date, String.valueOf(date), rows);
         }
     }
 
-    /** Parallel arrays of change days and rows, sorted by day; a null row is a tombstone. */
+    /** The version that introduced a change, shared by every change it introduced. */
+    private record Stamp(LocalDate date, String versionRef) {}
+
+    /**
+     * Parallel arrays of change days, rows and introducing versions, sorted by day; a null row is a
+     * tombstone.
+     */
     private static final class KeyTimeline<RECORD> {
         private int[] days = new int[1];
         private Object[] rows = new Object[1];
+        private Stamp[] stamps = new Stamp[1];
         private int size;
 
-        void add(int day, RECORD row) {
+        void add(int day, RECORD row, Stamp stamp) {
             if (size == days.length) {
                 days = Arrays.copyOf(days, size * 2);
                 rows = Arrays.copyOf(rows, size * 2);
+                stamps = Arrays.copyOf(stamps, size * 2);
             }
             days[size] = day;
             rows[size] = row;
+            stamps[size] = stamp;
             size++;
         }
 
@@ -117,18 +134,19 @@ final class Timeline<KEY, RECORD> {
         snapshot.rows()
                 .values()
                 .forEach(row -> Objects.requireNonNull(row, "row must not be null"));
+        Stamp stamp = new Stamp(snapshot.date(), snapshot.versionRef());
 
         snapshot.rows()
                 .forEach(
                         (key, row) -> {
                             RECORD previous = newestRows.get(key);
                             if (previous == null || !previous.equals(row)) {
-                                timeline(key).add(day, row);
+                                timeline(key).add(day, row, stamp);
                             }
                         });
         newestRows.keySet().stream()
                 .filter(key -> !snapshot.rows().containsKey(key))
-                .forEach(key -> timeline(key).add(day, null));
+                .forEach(key -> timeline(key).add(day, null, stamp));
 
         newestRows = new HashMap<>(snapshot.rows());
         if (!loaded) {
@@ -151,14 +169,68 @@ final class Timeline<KEY, RECORD> {
         if (timeline == null) {
             return Optional.empty();
         }
-        long clamped = Math.max(oldest, Math.min(newest, asOf.toEpochDay()));
-        int index = timeline.floor((int) clamped);
+        int index = timeline.floor(clampedDay(asOf.toEpochDay()));
         if (index < 0) {
             return Optional.empty();
         }
-        @SuppressWarnings("unchecked")
-        RECORD row = (RECORD) timeline.rows[index];
-        return Optional.ofNullable(row);
+        return Optional.ofNullable(row(timeline, index));
+    }
+
+    /**
+     * Answers like {@link #get} and reports what asserted the answer (ADR 0002).
+     *
+     * @param key the key to look up
+     * @param asOf the date to answer for
+     * @return the row and its provenance
+     */
+    Lookup<RECORD> lookup(KEY key, LocalDate asOf) {
+        long asOfDay = asOf.toEpochDay();
+        Clamp clamp = Clamp.NONE;
+        Duration distance = Duration.ZERO;
+        LocalDate effective = asOf;
+        if (loaded && asOfDay < oldest) {
+            clamp = Clamp.BEFORE_OLDEST;
+            distance = Duration.ofDays(oldest - asOfDay);
+            effective = LocalDate.ofEpochDay(oldest);
+        } else if (loaded && asOfDay > newest) {
+            clamp = Clamp.AFTER_NEWEST;
+            distance = Duration.ofDays(asOfDay - newest);
+            effective = LocalDate.ofEpochDay(newest);
+        }
+
+        KeyTimeline<RECORD> timeline = timelines.get(key);
+        int index = timeline == null ? -1 : timeline.floor((int) effective.toEpochDay());
+        if (index < 0) {
+            return new Lookup<>(
+                    Optional.empty(),
+                    new Provenance(
+                            Outcome.NOT_FOUND,
+                            Optional.empty(),
+                            Optional.empty(),
+                            clamp,
+                            distance,
+                            effective));
+        }
+        RECORD row = row(timeline, index);
+        Stamp stamp = timeline.stamps[index];
+        return new Lookup<>(
+                Optional.ofNullable(row),
+                new Provenance(
+                        row == null ? Outcome.DELETED : Outcome.PRESENT,
+                        Optional.of(stamp.date()),
+                        Optional.of(stamp.versionRef()),
+                        clamp,
+                        distance,
+                        effective));
+    }
+
+    private int clampedDay(long day) {
+        return (int) Math.max(oldest, Math.min(newest, day));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <RECORD> RECORD row(KeyTimeline<RECORD> timeline, int index) {
+        return (RECORD) timeline.rows[index];
     }
 
     /** The number of dated changes held for {@code key}, tombstones included. */

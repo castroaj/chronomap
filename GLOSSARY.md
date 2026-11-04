@@ -40,6 +40,14 @@ _Avoid_: Interval table
 What a lookup reports about what asserted its answer: the outcome, the date and reference of the version that introduced the answer, and any clamp. Returned by `lookup`, never by `get`.
 _Avoid_: Metadata, audit trail, lineage
 
+**Outcome**:
+Whether a lookup found the key present, deleted (its latest dated change on the effective date is a tombstone), or not found (no dated change at or before the effective date). Part of provenance.
+_Avoid_: Status, result
+
+**Effective date**:
+The as-of date after clamping: the date a lookup actually answers for.
+_Avoid_: Resolved date, adjusted date
+
 **Clamp**:
 Moving an as-of date to the oldest or newest version when it falls outside them. Provenance reports which side (`BEFORE_OLDEST` or `AFTER_NEWEST`) and how many days the date was moved.
 _Avoid_: Fallback, extrapolation

@@ -10,7 +10,7 @@
 - **`clamp`**: `NONE`, `BEFORE_OLDEST` or `AFTER_NEWEST`, from the as-of date against the table type's oldest and newest version dates.
 - **Clamp distance**: a non-negative `Duration` of whole days between the as-of date and the bound it was clamped to. `Duration.ZERO` when `clamp` is `NONE`. The direction comes from `clamp`.
 - **Effective date**: the as-of date after clamping.
-- **`matchedRange`**: optional, the inclusive `lo` and `hi` of the range that answered. Empty for exact-keyed table types. Reserved and unused in v0.1. For a range-keyed table type the change fields come from the matched range's own timeline, `DELETED` means its latest change is a tombstone, and `NOT_FOUND` means no range contained the value (see ADR 0001).
+- **`matchedRange`**: not part of `Provenance` in v0.1. It is added when range-keyed table types are built (ADR 0001): an optional inclusive `lo` and `hi` of the range that answered, empty for exact-keyed table types. For a range-keyed table type the change fields will come from the matched range's own timeline, `DELETED` means its latest change is a tombstone, and `NOT_FOUND` means no range contained the value.
 
 ## Cost
 
